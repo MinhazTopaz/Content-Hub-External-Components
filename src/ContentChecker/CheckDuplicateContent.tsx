@@ -6,11 +6,11 @@ interface IContent {
 }
 
 const CheckDuplicateContent: FunctionComponent = ({}) => {
-  const [body, setBody] = useState<string>("Gathering Content");
+  const [body, setBody] = useState<string>("Gathering all M.Content.");
+  const [content, setContent] = useState<Array<IContent>>([]);
   const serverName = window.location.hostname;
 
   var contentArray: Array<IContent> = [];
-  var returnText: string = "";
 
   useEffect(() => {
     const getList = async () => {
@@ -18,31 +18,60 @@ const CheckDuplicateContent: FunctionComponent = ({}) => {
 
       let mDotContents =
         "https://" + serverName + "/api/entities/query?query=" + query;
-
+      setBody("Calculating duplicates.");
       await GetContent(mDotContents, contentArray).then((response) => {
-          console.log("done looping");
-          console.log(contentArray);
+        console.log("done looping");
+        //console.log(contentArray);
       });
 
-      contentArray.forEach((content) => {
-        returnText +=
-          "<a href='https://" +
-          serverName +
-          "/Pages/en-US/ContentDetail/" +
-          content.contentId +
-          "' target='_blank'> " +
-          content.contentName +
-          " </a>" +
-          "<br />";
-      });
+      setBody("Generating list...");
+      const duplicates = findDuplicates(contentArray);
+      console.log(duplicates);
 
-      setBody(returnText);
+      setContent(duplicates);
+      setBody("");
+      // duplicates.forEach((content) => {
+      //   returnText +=
+      //     "<a href='https://" +
+      //     serverName +
+      //     "/Pages/en-US/ContentDetail/" +
+      //     content.contentId +
+      //     "' target='_blank'> " +
+      //     content.contentName +
+      //     " </a>" +
+      //     "<br />";
+      // });
+
+      // setBody(returnText);
     };
 
     getList();
   }, []);
 
-  return <div dangerouslySetInnerHTML={{ __html: body }} />;
+  //return <div dangerouslySetInnerHTML={{ __html: body }} />;
+  return (
+    <>
+    <h1>M.Content with duplicate names:</h1>
+      <div>{body}</div>
+      <ul>
+        {content.map((item, index) => (
+          <li key={index}>
+            <a
+              href={
+                "https://" +
+                serverName +
+                "/Pages/en-US/ContentDetail/" +
+                item.contentId
+              }
+              target="_blank"
+            >
+              {item.contentName}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 };
 
 const GetContent = async (
@@ -85,6 +114,27 @@ const GetContent = async (
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function findDuplicates(contents: IContent[]): IContent[] {
+  const contentMap = new Map<string, IContent[]>();
+  const duplicates: IContent[] = [];
+
+  for (const content of contents) {
+    if (contentMap.has(content.contentName)) {
+      contentMap.get(content.contentName)!.push(content);
+    } else {
+      contentMap.set(content.contentName, [content]);
+    }
+  }
+
+  for (const items of contentMap.values()) {
+    if (items.length > 1) {
+      duplicates.push(...items);
+    }
+  }
+
+  return duplicates;
 }
 
 export default CheckDuplicateContent;
